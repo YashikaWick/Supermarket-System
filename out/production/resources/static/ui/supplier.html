@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Harvest Super : BIT Final Project</title>
+    <link rel="stylesheet" href="../plugin/bootstrap/css/bootstrap.min.css"/>
+    <script src="../plugin/jquery/jquery.min.js"></script>
+    <script src="../plugin/bootstrap/js/bootstrap.min.js"></script>
+
+    <link rel="stylesheet" href="../style/common.css"/>
+    <script src="../script/common.bitproject.earth.lk.v1.js"></script>
+    <script src="../script/ui.bitproject.earth.lk.v1.js"></script>
+
+    <script>
+
+        window.addEventListener("load", initialize);
+
+        //Initializing Functions
+
+        function initialize() {
+
+
+            btnAdd.addEventListener("click",btnAddMC);
+            btnClear.addEventListener("click",btnClearMC);
+            btnUpdate.addEventListener("click",btnUpdateMC);
+            btnDelete.addEventListener("click",btnDeleteMC);
+
+            btnSearch.addEventListener("click",btnSearchMC);
+            btnSearchClear.addEventListener("click",btnSearchClearMC);
+
+
+
+            privilages = httpRequest("../privilages?module=SUPPLIER","GET");
+           regexes = httpRequest("../regexes/supplier","GET");
+
+            txtName.setAttribute("data-pattern",regexes.name.regex);
+            txtRegno.setAttribute("data-pattern",regexes.regno.regex);
+            txtAddress.setAttribute("data-pattern",regexes.address.regex);
+            txtPhone.setAttribute("data-pattern",regexes.phone.regex);
+            txtEmail.setAttribute("data-pattern",regexes.email.regex);
+            txtContactname.setAttribute("data-pattern",regexes.contactname.regex);
+            txtContactnumber.setAttribute("data-pattern",regexes.contactnumber.regex);
+            txtNic.setAttribute("data-pattern",regexes.nic.regex);
+
+
+            employees = httpRequest("../employees/list","GET");
+            supplierstatuses = httpRequest("../supplierstatuses/list","GET");
+            items = httpRequest("../items/list","GET");
+
+
+
+            valid = "lightgreen";
+            invalid = "pink";
+            initial = "white";
+            updated = "khaki";
+            active = "khaki";
+
+            loadView();
+            loadForm();
+
+
+
+        }
+
+        function loadView() {
+
+            /*//Search Area
+            txtSearchUsername.value="";
+            fillCombo(cmbSearchRole,"Role",roles,"name","");
+            fillCombo(cmbSearchUserstatus,"Status",userstatuses,"name","");
+            cmbSearchUserstatus.style.background = "";
+            cmbSearchRole.style.background = "";
+            txtSearchUsername.style.background = "";
+*/
+            //Table Area
+            activerowno = "";
+            activepage = 1;
+            loadTable(1,cmbPageSize.value,"");
+
+        }
+
+        function loadTable(page,size,query) {
+            page = page - 1;
+            suppliers = new Array();
+            var data = httpRequest("/suppliers?page="+page+"&size="+size+query,"GET");
+            if(data.content!= undefined) suppliers = data.content;
+            createPagination('pagination',data.totalPages, data.number+1,paginate);
+            fillTable('tblSupplier',suppliers,fillForm);
+            clearSelection(tblSupplier);
+            if(activerowno!="")selectRow(tblSupplier,activerowno,active);
+            window.location.href="#ui";
+        }
+
+        function paginate(page) {
+           /* var paginate;
+            if(olduser==null){
+                paginate=true;
+            }else{
+                if(getErrors()==''&&getUpdates()==''){
+                    paginate=true;
+                }else{
+                    paginate = window.confirm("Form has Some Errors or Update Values. " +
+                        "Are you sure to discard that changes ?");
+                }
+            }
+            if(paginate) {
+                activepage=page;
+                activerowno=""
+                loadSearchedTable();
+                loadForm();
+            }
+*/
+        }
+
+        function loadForm() {
+
+            supplier = new Object();
+            oldsupplier = null;
+
+            supplier.supplyList = new Array();
+            itemsright = new Array();
+            itemsleft = items;
+
+
+            fillCombo(cmbSupplierstatuse,"Select Supplier Statuse",supplierstatuses,"name","New");
+            fillCombo(cmbEmployee,"Select Employee",employees,"callingname",session.getObject("user").employeeId.callingname);
+
+
+            setListTransferData('supplieritem',items);
+
+            var today = new Date();
+            var month = today.getMonth()+1;
+            if(month<10) month = "0"+month;
+            var date = today.getDate()+1;
+            if(date<10) date = "0"+date;
+
+            dteDORegdate.value=today.getFullYear()+"-"+month+"-"+date;
+
+            supplier.date=dteDORegdate.value;
+            supplier.employeeId=JSON.parse(cmbEmployee.value);
+            supplier.supplierstatusId=JSON.parse(cmbSupplierstatuse.value);
+
+            txtName.value = "";
+            txtRegno.value = "";
+            txtAddress.value = "";
+            txtPhone.value = "";
+            txtEmail.value = "";
+            txtContactname.value = "";
+            txtContactnumber.value = "";
+            txtNic.value = "";
+
+
+            setStyle(initial);
+            cmbSupplierstatuse.style.background=valid;
+            dteDORegdate.style.background=valid;
+            cmbEmployee.style.background=valid;
+
+
+            disableButtons(false, true, true);
+            cmbEmployee.disabled="disabled";
+        }
+
+        function setStyle(style) {
+
+            txtName.style.background = style;
+            txtRegno.style.background = style;
+            txtAddress.style.background = style;
+            txtPhone.style.background = style;
+            txtEmail.style.background = style;
+            txtContactname.style.background = style;
+            txtContactnumber.style.background = style;
+            txtNic.style.background = style;
+            dteDORegdate.style.background = style;
+            cmbEmployee.style.background = style;
+            cmbSupplierstatuse.style.background = style;
+
+        }
+
+        function disableButtons(add, upd, del) {
+
+           if (add || !privilages.add) btnAdd.setAttribute("disabled", "disabled");
+            else btnAdd.removeAttribute("disabled");
+
+            if (upd || !privilages.update) btnUpdate.setAttribute("disabled", "disabled");
+            else btnUpdate.removeAttribute("disabled");
+
+            if (del || !privilages.delete) btnDelete.setAttribute("disabled", "disabled");
+            else btnDelete.removeAttribute("disabled");
+
+          /*  if (upd || !changepasswordprivilages.add) btnSetToDefault.setAttribute("disabled", "disabled");
+            else btnSetToDefault.removeAttribute("disabled");*/
+
+        }
+
+
+        // Binding and Validation Functions for Non-Regex-Based
+        // When Regex-Based default validation is used, programmers do not need to define these functions
+        // Default Validation and Binding is coded in "ui.bitproject.earth.lk.js"
+
+
+        //Form Operation Functions
+
+        function getErrors() {
+
+            var errors = "";
+
+            if (supplier.name == null)
+                errors = errors + "\n" + regexes.name.message;
+
+            if (supplier.regno == null)
+                errors = errors + "\n" + regexes.regno.message;
+
+            if (supplier.phone == null)
+                errors = errors + "\n" + regexes.phone.message;
+
+            if (supplier.contactname == null)
+                errors = errors + "\n" + regexes.contactname.message;
+
+            if (supplier.contactnumber == null)
+                errors = errors + "\n" + regexes.contactnumber.message;
+
+            if (supplier.nic == null)
+                errors = errors + "\n" + regexes.nic.message;
+
+            if (supplier.date == null)
+                errors = errors + "\n" +"Date not Selected";
+
+            if (supplier.employeeId == null)
+                errors = errors + "\n" +"Employee not Selected";
+
+            if (supplier.supplierstatusId == null)
+                errors = errors + "\n" +"Status not Selected";
+
+            if (supplier.address == null && txtAddress.value!="")
+                errors = errors + "\n" + regexes.address.message;
+
+            if (supplier.supplyList.length == 0)
+                errors = errors + "\n" + "Item Not Selected";
+
+            return errors;
+
+        }
+
+        function btnAddMC(){
+        //    window.alert("La La");
+            var errors = getErrors();
+
+            if(errors==""){
+                var itemlist="";
+                for(x in supplier.supplyList)
+                    itemlist = itemlist + (itemlist==""?"":", ") +supplier.supplyList[x].itemId.name
+
+                var option = window.confirm("Are you sure to add following Supplier ?\n" +
+                    "\nName : " + supplier.name +
+                    "\nReg. no : " + supplier.regno +
+                    "\nPhone : " + supplier.phone +
+                    "\nEmail : " + supplier.email +
+                    "\nContact Name : " + supplier.contactname +
+                    "\nContact NIC : " + supplier.nic +
+                    "\nItems : " + itemlist +
+                    "\nSupplier Status : " + supplier.supplierstatusId.name +
+                    "\nEmplyee Name : " + supplier.employeeId.callingname);
+                if(option==true) {
+                    var response = httpRequest("/suppliers","POST",supplier);
+                    if(response=="0"){
+                        toast("<strong>Success !</strong> Saved Successfully","success");
+                         loadForm();
+                        activerowno = 1;
+                        loadView();//loadSearchedTable();
+                    }
+                    else window.alert("Failed to Add as \n\n"+response);
+                }
+
+            }
+            else
+            { window.alert("You have following Errors\n"+errors); }
+
+
+        }
+
+        function btnClearMC() {
+
+            var clear;
+            if(oldsupplier==null){
+                clear=true;
+            }else{
+                if(getErrors()=='' && getUpdates()==''){
+                    clear=true;
+                }else{
+                    clear = window.confirm("Form has Some Errors or Update Values. " +
+                        "Are you sure to discard that changes ?");
+                }
+            }
+            if(clear) {
+                loadForm();
+                clearSelection(tblSupplier);
+            }
+
+
+
+
+        }
+
+        function fillForm(sup,rowno){
+           activerowno = rowno;
+            var filling;
+            if(oldsupplier==null){
+                filling=true;
+            }else{
+
+                if(getErrors()==''&&getUpdates()==''){
+                    filling=true;
+                }else{
+                    filling = window.confirm("Form has Some Errors or Update Values. " +
+                        "Are you sure to discard that changes ?");
+                }
+            }
+
+            if(filling) {
+                setListTransferData('supplieritem',items);
+
+                clearSelection(tblSupplier);
+                selectRow(tblSupplier,activerowno,active);
+
+                supplier = JSON.parse(JSON.stringify(sup));
+                oldsupplier = JSON.parse(JSON.stringify(sup));
+
+                setListTransferValues('supplieritem',supplier.supplyList);
+
+                txtName.value = supplier.name;
+                txtRegno.value = supplier.regno;
+                txtAddress.value = supplier.address;
+                txtPhone.value = supplier.phone;
+                txtEmail.value = supplier.email;
+                txtContactname.value = supplier.contactname;
+                txtContactnumber.value = supplier.contactnumber;
+                txtNic.value = supplier.nic;
+
+
+                fillCombo(cmbSupplierstatuse,"Select Supplier Statuse",supplierstatuses,"name",supplier.supplierstatusId.name);
+                fillCombo(cmbEmployee,"Select Employee",employees,"callingname",supplier.employeeId.callingname);
+
+                cmbEmployee.disabled="";
+                disableButtons(true, false, false);
+                setStyle(valid);
+            }
+
+        }
+
+        function getUpdates() {
+
+          var updates = "";
+
+            if(supplier!=null && oldsupplier!=null) {
+
+                if (isEqual(supplier.supplyList,oldsupplier.supplyList,"itemId"))
+                     updates = updates + "\nItems are Changed";
+
+                if (supplier.name != oldsupplier.name)
+                    updates = updates + "\nName is Changed";
+
+                if (supplier.regno != oldsupplier.regno)
+                    updates = updates + "\nReg. No is Changed";
+
+                if (supplier.address != oldsupplier.address)
+                    updates = updates + "\nAddress is Changed";
+
+                if (supplier.phone != oldsupplier.phone)
+                    updates = updates + "\nPhone is Changed";
+
+                if (supplier.email != oldsupplier.email)
+                    updates = updates + "\nEmail is Changed";
+
+                if (supplier.contactname != oldsupplier.contactname)
+                    updates = updates + "\nContact Name is Changed";
+
+                if (supplier.contactnumber != oldsupplier.contactnumber)
+                    updates = updates + "\nContact number is Changed";
+
+                if (supplier.nic != oldsupplier.nic)
+                    updates = updates + "\nNIC is Changed";
+
+                if (supplier.supplierstatusId.name != oldsupplier.supplierstatusId.name)
+                    updates = updates + "\nsupplierstatus is Changed";
+
+                if (supplier.employeeId.callingname != oldsupplier.employeeId.callingname)
+                    updates = updates + "\nEmployee is Changed";
+
+            }
+
+            return updates;
+
+        }
+
+        function btnUpdateMC() {
+           var errors = getErrors();
+            if (errors == "") {
+                var updates = getUpdates();
+                if (updates == "") window.alert("Nothing Updated!");
+                else {
+
+                    var option = window.confirm("\n\nAre your sure to update followings ! \n\n" + updates);
+                    if(option==true) {
+                        var response = httpRequest("/suppliers","PUT",supplier);
+                        if(response=="0"){
+                            toast("<strong>Success !</strong> Updated Successfully","success");
+                            loadForm();
+                            loadView(); //loadSearchedTable();
+
+                        }
+                        else window.alert("Failed to Update as \n\n"+response);
+                    }
+
+
+                }
+            }
+            else
+                window.alert("You have following errors in your form\n\n"+getErrors());
+       }
+
+        function btnDeleteMC() {
+
+/*
+
+            var option = window.confirm("\n\nAre your sure to delete following ! \n\n" +
+                "Number : " +user.username+ "\nStatus : " +user.userstatusId.name);
+
+            if(option==true) {
+                var response = httpRequest("/users","DELETE",user);
+                if(response=="0"){
+                    toast("<strong>Success !</strong> Deleted Successfully","success");
+                    employeeswithoutusers = httpRequest("../datalists/employeeswithoutusers","GET");
+                    loadForm();
+                    loadSearchedTable();
+
+                }
+                else window.alert("Failed to Delete as \n\n"+response);
+            }
+*/
+
+        }
+
+
+        //Search Functions
+
+        function loadSearchedTable(){
+
+           /* var username = txtSearchUsername.value.trim();
+            var role = cmbSearchRole.value;
+            var userstatus = cmbSearchUserstatus.value;
+
+            var roleid="";
+            if(role!="Role")
+            { roleid = JSON.parse(role).id;
+                cmbSearchRole.style.background = active;}
+
+            var userstatusid="";
+            if(userstatus!="Status")
+            {  userstatusid = JSON.parse(userstatus).id;
+                cmbSearchUserstatus.style.background = active; }
+
+            if(username!=""){  txtSearchUsername.style.background = active; }
+
+            var query ="&username=&roleid=&userstatusid=";
+
+            if(username!="" || roleid!="" || userstatusid!="" )
+                query = "&username=" + username + "&roleid=" + roleid + "&userstatusid=" + userstatusid;
+
+            //window.alert(query);
+            loadTable(activepage, cmbPageSize.value, query);
+*/
+        }
+
+        function btnSearchMC(){
+           /* activepage=1;
+            loadSearchedTable();*/
+        }
+
+        function btnSearchClearMC(){
+          //  loadView();
+        }
+
+
+    </script>
+
+
+
+
+</head>
+<body>
+<div class="container-fluid">
+    <div class="panel panel-primary" id="ui">
+        <div class="panel-heading">
+            <h3>Supplier Management</h3>
+        </div>
+        <div class="panel-body">
+            <div class="row">
+
+                <div class="col-md-4" id="form">
+                    <form class="form-horizontal" onsubmit="return false" id="supplierform" >
+
+                        <script>
+
+                            // Defining UI-Componnets and Layouts
+                            // Default UI-Componnets and Layouts is coded in "ui.bitproject.earth.lk.js"
+
+
+                            textField('supplierform','txtName','Supplier Name','Enter Name Here','',4,"",'supplier','name','oldsupplier');
+                            textField('supplierform','txtRegno','Reg. No','Enter Reg. No Here','',4,"",'supplier','regno','oldsupplier');
+                             textArea('supplierform','txtAddress','Address','Enter Address Here','',4,"",'supplier','address','oldsupplier');
+                            textField('supplierform','txtPhone','Phone','Enter Phone Here','',4,"",'supplier','phone','oldsupplier');
+                            textField('supplierform','txtEmail','Email','Enter Email Here','',4,"",'supplier','email','oldsupplier');
+                            textField('supplierform','txtContactname','Contact Name','Enter Contact Name Here','',4,"",'supplier','contactname','oldsupplier');
+                            textField('supplierform','txtContactnumber','Contact Number','Enter Contact Number Here','',4,"",'supplier','contactnumber','oldsupplier');
+                            textField('supplierform','txtNic','Nic','Enter Suppliername Here','',4,"",'supplier','nic','oldsupplier');
+
+
+                            // Custom UI-Componnets and Layouting
+
+                            listTransfer('supplierform','supplieritem','Items',4,'supplier','oldsupplier','supplyList','itemId');
+                            dateField('supplierform','dteDORegdate','Reg. Date','Select Reg. Date',4,"",'supplier','date','oldsupplier');
+                            comboBox('supplierform','cmbEmployee','Employee Created',4,'supplier','employeeId','oldsupplier');
+                            comboBox('supplierform','cmbSupplierstatuse','Supplier Status',4,'supplier','supplierstatusId','oldsupplier');
+
+
+                            //List-Transfer Functions
+
+
+
+                        </script>
+
+
+                        <div class="text-right">
+                            <input class="btn btn-danger btn-sm" type="button" id="btnDelete" value="Delete" style="width: 15%"/>
+                            <input class="btn btn-warning btn-sm" type="button" id="btnUpdate" value="Update" style="width: 15%"/>
+                            <input class="btn btn-success btn-sm" type="button" id="btnAdd" value="Add" style="width: 17%"/>
+                            <input class="btn btn-warning btn-sm" type="button" id="btnClear" value="Clear" style="width: 15%"/>
+                        </div>
+
+
+
+
+                    </form>
+                </div>
+
+
+                <div class="col-md-1"></div>
+                <div class="col-md-7" id="employeeview">
+
+                    <form class="form-inline" onsubmit="return false">
+                        <div class="form-group form-group-sm">
+                            <input placeholder="Search By Name" class="form-control" type="text" id="txtSearchUsername"/>
+                        </div>
+
+                        <div class="form-group form-group-sm">
+                            <select class="form-control" id="cmbSearchRole"></select>
+                        </div>
+                        <div class="form-group form-group-sm">
+                            <select class="form-control" id="cmbSearchUserstatus"></select>
+                        </div>
+                        <input type="button" class="btn btn-warning btn-sm" value="Clear Search" id="btnSearchClear"/>
+                        <input type="button" class="btn btn-success btn-sm" value="Search" id="btnSearch"/>
+                    </form>
+                    <hr/>
+
+
+                    <div class="table-responsive" id="tableParent">
+
+                        <script>
+
+                            /*function getRoleColumn(ob) {
+                                var rolelist="";
+                                for(x in ob.userroleList)
+                                    rolelist = rolelist + (rolelist==""?"":", ") +ob.userroleList[x].roleId.name
+                                return rolelist;
+                            }
+
+                            function getUserName(ob) {
+                                if (ob.employeeId!=null){
+                                    return ob.employeeId.callingname;
+                                }else if (ob.customerId!=null){
+                                    return ob.customerId.fname;
+                                }
+                            }*/
+                            
+                            function getItemsName(ob) {
+                                var itemlist="";
+                                for(x in ob.supplyList)
+                                    itemlist = itemlist + (itemlist==""?"":", ") +ob.supplyList[x].itemId.name
+                                return itemlist;
+                            }
+
+                            var metadata = [
+                                {name:'Name',search:true,datatype:'text',property:'name'},
+                                {name:'Phone',search:true,datatype:'text',property:'phone'},
+                                {name:'Contact Name',search:true,datatype:'text',property:'contactname'},
+                                {name:'Contact Number',search:true,datatype:'text',property:'contactnumber'},
+                                {name:'Items',search:true,datatype:'text',property:getItemsName},
+                                {name:'Status',search:true,datatype:'text',property:'supplierstatusId.name'}
+                            ];
+
+                            table("tableParent","tblSupplier",metadata,[3,10,15,30,500,1000],btnSearchMC);
+
+                        </script>
+
+
+                    </div>
+                    <ul id="pagination" class="pagination"></ul>
+
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-footer"><div id="err"><h3>Error Log</h3></div></div>
+    </div>
+</div>
+
+
+</body>
+</html>

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+        <title>Two Elephants Fireworks : BIT Final Project</title>
+
+        <link rel="stylesheet" href="../plugin/bootstrap/css/bootstrap.min.css"/>
+
+        <link rel="stylesheet" href="../style/common.css"/>
+        <link rel="stylesheet" href="../style/style4.css"/>
+        <script src="../script/common.bitproject.earth.lk.v1.js"></script>
+        <script src="../script/ui.bitproject.earth.lk.v1.js"></script>
+
+
+        <script>
+
+        window.addEventListener("load", initialize);
+
+        function initialize() {
+            spnUsername.innerHTML = " "+session.getObject("user").customerId.fname;
+            laodUi("homenew");
+
+        }
+
+        function laodUi(ui) {
+            frmMainWindow.src = 'http://localhost:8080/ui/' + ui;
+        }
+
+        function changePassword() {
+            if (window.confirm("Do you need to change the Password ?")) {
+                cookie.setValue("username", "", 1);
+                cookie.setValue("password", "", 1);
+                session.setObject("user", new Object());
+                 window.open("changepassword", "_self");
+             }
+        }
+
+
+        function logout() {
+            if(window.confirm("Do you need to logout ?")) {
+
+
+             ajax = new XMLHttpRequest();
+             ajax.open("PUT", "/session", false);
+        // ajax.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+            ajax.send();
+             err.innerHTML=err.innerHTML+ajax.responseText;
+
+             if(ajax.status==200 && ajax.responseText!="") {
+                 responce = ajax.responseText;
+                 cookie.setValue("username", "", 1);
+                 cookie.setValue("password", "", 1);
+                 session.setObject("user", new Object());
+                 window.alert(responce);
+                 window.open("login2", "_self");
+             }
+             else
+                 window.alert("Failed to logout");
+
+
+            }
+        }
+
+             $(document).ready(function () {
+                 $('ul.nav li.dropdown').hover(function () {
+                 $(this).find('.dropdown-menu').stop(true, true).delay(200).fadeIn(10);
+                 }, function () {
+                         $(this).find('.dropdown-menu').stop(true, true).delay(200).fadeOut(10);
+                    });
+             });
+
+
+        </script>
+    </head>
+    <body>
+
+
+            <!-- Page Content Holder -->
+
+        <div id="content" style="position: inherit; width:100%;">
+
+                <nav class="navbar nav">
+                    <div class="container-fluid">
+
+                        <div class="navbar-header navbar-left">
+                            <button type="button" id="sidebarCollapse" class="btn btn-info navbar-btn">
+                                <i class="glyphicon glyphicon-align-left"></i>
+                                <span><h4>Two Elephants Fireworks</h4></span>
+                            </button>
+                        </div>
+
+
+
+                        <ul class="nav navbar-nav navbar-right">
+                            <li><a href="#"> <span class="glyphicon glyphicon-user"> </span> <span id="spnUsername"> User </span> </a></li>
+                            <li onclick="changePassword()"><a href="#"> <span class="glyphicon glyphicon-lock"> </span> Change Password </a></li>
+                            <li onclick="logout()"><a href="#"> <span class="glyphicon glyphicon-log-out"> </span> Logout </a></li>
+                        </ul>
+                    </div>
+                </nav>
+
+
+            <div class="container-fluid" style="margin-top: -10px">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="row" style="position:relative">
+                            <div style="float: left;">
+                                <div class="wrapper">
+                                    <!-- Sidebar Holder -->
+                                    <nav id="sidebar" style="background-color:black ">
+                                        <div class="sidebar-header">
+                                            <!--<h3>Two Elephants Fireworks</h3>-->
+                                            <img src="../image/earthuniversity.jpg" class="img-responsive" style="width: 400px;">
+                                            <strong>TEF</strong>
+                                        </div>
+
+                                        <ul class="list-unstyled components">
+                                            <li class="active" onclick="laodUi('home')">
+                                                <a href="#">
+                                                    <i class="glyphicon glyphicon-home"></i>
+                                                    Home
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a href="#adminSubmenu" data-toggle="collapse" aria-expanded="false">
+                                                    <i class="glyphicon glyphicon-link" ></i>
+                                                    Admin
+                                                </a>
+                                                <ul class="collapse list-unstyled" id="adminSubmenu">
+                                                    <li onclick="laodUi('employee')"><a>Employee</a></li>
+                                                    <li onclick="laodUi('user')"><a>User</a></li>
+                                                    <li onclick="laodUi('previlage')"><a>Privilages</a></li>
+                                                    <li onclick="laodUi('designation')"><a>Designation</a></li>
+                                                    <li onclick="laodUi('gender')"><a>Gender</a></li>
+                                                    <li onclick="laodUi('civilstatus')"><a>Civilstatus</a></li>
+                                                    <li onclick="laodUi('employeestatus')"><a>Employeestatus</a></li>
+                                                    <li onclick="laodUi('userstatus')"><a>Userstatus</a></li>
+                                                </ul>
+                                            </li>
+                                            <li>
+                                                <a href="#productSubmenu" data-toggle="collapse" aria-expanded="false">
+                                                    <i class="glyphicon glyphicon-briefcase"></i>
+                                                    Product
+                                                </a>
+                                                <ul class="collapse list-unstyled" id="productSubmenu">
+                                                    <li><a href="#">Product Item</a></li>
+                                                    <li><a href="#">Itempackage</a></li>
+                                                    <li><a href="#">Category</a></li>
+                                                </ul>
+                                                <a href="#pageSubmenu" data-toggle="collapse" aria-expanded="false">
+                                                    <i class="glyphicon glyphicon-duplicate"></i>
+                                                    Purchase
+                                                </a>
+                                                <ul class="collapse list-unstyled" id="pageSubmenu">
+                                                    <li><a href="#">Purchase</a></li>
+                                                    <li><a href="#">GRN</a></li>
+                                                    <li onclick="laodUi('supplier')"><a href="#">Supplier</a></li>
+                                                    <li onclick="laodUi('meterial')"><a href="#">Meterial</a></li>
+                                                    <li><a href="#">Invoice</a></li>
+                                                </ul>
+                                            </li>
+                                            <li>
+                                                <a href="#">
+                                                    <i class="glyphicon glyphicon-link"></i>
+                                                    Portfolio
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a href="#">
+                                                    <i class="glyphicon glyphicon-paperclip"></i>
+                                                    FAQ
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a href="#">
+                                                    <i class="glyphicon glyphicon-send"></i>
+                                                    Contact
+                                                </a>
+                                            </li>
+                                        </ul>
+
+                                        <ul class="list-unstyled CTAs">
+
+                                        </ul>
+                                    </nav>
+                                </div>
+                            </div>
+                            <div style="overflow: auto; margin-top: -5px">
+                                <iframe id="frmMainWindow" style=" width:100%;height:605px;border:0;"></iframe>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            </div>
+            <div id="err"></div>
+
+
+        <script src="../plugin/jquery/jquery.min.js"></script>
+        <script src="../plugin/bootstrap/js/bootstrap.min.js"></script>
+
+         <script type="text/javascript">
+             $(document).ready(function () {
+                 $('#sidebarCollapse').on('click', function () {
+                     $('#sidebar').toggleClass('active');
+                 });
+             });
+         </script>
+    </body>
+</html>

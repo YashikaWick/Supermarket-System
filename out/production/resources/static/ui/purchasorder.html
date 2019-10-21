@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Harvest Super : BIT Final Project</title>
+    <link rel="stylesheet" href="../plugin/bootstrap/css/bootstrap.min.css"/>
+    <script src="../plugin/jquery/jquery.min.js"></script>
+    <script src="../plugin/bootstrap/js/bootstrap.min.js"></script>
+
+    <link rel="stylesheet" href="../style/common.css"/>
+    <script src="../script/common.bitproject.earth.lk.v1.js"></script>
+    <script src="../script/ui.bitproject.earth.lk.v1.js"></script>
+
+    <script>
+
+        window.addEventListener("load", initialize);
+
+        //Initializing Functions
+
+        function initialize(){
+
+            btnFormPrint.onclick=function(){
+                printForm("purchasorderform");
+
+            }
+
+            btnPrintTable.onclick=function(){
+                printTable("tblPurchasorder");
+            }
+
+            btnAdd.addEventListener("click",btnAddMC);
+            btnClear.addEventListener("click",btnClearMC);
+            btnUpdate.addEventListener("click",btnUpdateMC);
+            btnDelete.addEventListener("click",btnDeleteMC);
+
+            cmbSupplier.addEventListener("change",cmbSupplierMC);
+          cmbItem.addEventListener("change",cmbItmMC);
+
+           // txtPassword.addEventListener("keyup",txtPasswordKU);
+           // txtRetypePassword.addEventListener("keyup",txtRetypePasswordKU);
+            btnAddPorder.addEventListener("click",btnAddPorderMC);
+
+            btnSearchClear.addEventListener("click",btnSearchClearMC);
+            btnSearch.addEventListener("click",btnSearchMC);
+
+            privilages = httpRequest("../privilages?module=PORDERS","GET");
+/*
+          regexes = httpRequest("../regexes/purchasorder","GET");
+          txtPonumber.setAttribute("data-pattern",regexes.ponumber.regex);
+          txtTotalprice.setAttribute("data-pattern",regexes.totalprice.regex);
+*/
+
+
+            employees = httpRequest("../employees/list","GET");
+            postatuses = httpRequest("../porderstatuses/list","GET");
+            suppliers = httpRequest("../suppliers/list","GET");
+           // meterials = httpRequest("../meterials/list","GET");
+
+
+            valid = "lightgreen";
+            invalid = "pink";
+            initial = "white";
+            updated = "khaki";
+            active = "khaki";
+
+           loadView();
+           loadForm();
+
+
+        }
+
+        function loadView() {
+
+           /* //Search Area
+            txtSearchPonumber.value="";
+            fillCombo(cmbSearchSupplier,"Supplier",suppliers,"name","");
+            fillCombo(cmbSearchPostatus,"Status",postatuses,"name","");
+            cmbSearchPostatus.style.background = "";
+            cmbSearchSupplier.style.background = "";
+            txtSearchPonumber.style.background = "";*/
+
+            //Table Area
+          activerowno = "";
+            activepage = 1;
+            var query ="&ponumber=&supplierid=&postatusid=";
+           loadTable(1,cmbPageSize.value,query);
+
+        }
+
+        function loadTable(page,size,query) {
+             page = page - 1;
+            purchasorders = new Array();
+            var data = httpRequest("/purchaseorders?page="+page+"&size="+size+query,"GET");
+            purchasorders = data.content;
+            createPagination('pagination',data.totalPages, data.number+1,paginate);
+            fillTable('tblPurchasorder',purchasorders,fillForm);
+            clearSelection(tblPurchasorder);
+            if(activerowno!="")selectRow(tblPurchasorder,activerowno,active);
+            window.location.href="#ui";
+
+        }
+
+        function paginate(page) {
+
+            var paginate;
+            if(oldpurchasorder==null){
+                paginate=true;
+            }else{
+                if(getErrors()=='' && getUpdates()==''){
+                    paginate=true;
+                }else{
+                    paginate = window.confirm("Form has Some Errors or Update Values. " +
+                        "Are you sure to discard that changes ?");
+                }
+            }
+            if(paginate) {
+                activepage=page;
+                activerowno=""
+                loadSearchedTable();
+                loadForm();
+            }
+
+        }
+
+        function loadForm() {
+
+            purchasorder = new Object();
+            oldpurchasorder = null;
+
+
+            purchasorder.porderitemList = new Array();
+
+
+            fillCombo(cmbSupplier,"Select Supplier",suppliers,"name","");
+            fillCombo(cmbItem,"Select Items",'',"name","");
+            fillCombo(cmbPostatus,"Select Purchas Order status",postatuses,"name","Pending");
+            fillCombo(cmbEmployeeCreated,"Select Employee",employees,"callingname",session.getObject("user").employeeId.callingname);
+
+            refreshInnerForm();
+
+
+            var today = new Date();
+            var month = today.getMonth()+1;
+            if(month<10) month = "0"+month;
+            var date = today.getDate()+1;
+            if(date<10) date = "0"+date;
+
+            dteDOCreated.value=today.getFullYear()+"-"+month+"-"+date;
+            purchasorder.date=dteDOCreated.value;
+            dteDOCreated.disabled="disabled";
+
+            purchasorder.employeeId=JSON.parse(cmbEmployeeCreated.value);
+            cmbEmployeeCreated.disabled="disabled";
+
+            purchasorder.porderstatusId=JSON.parse(cmbPostatus.value);
+
+            ponumber = httpRequest("../purchaseorders/pono","GET");
+            txtPonumber.value = JSON.parse(ponumber);
+            purchasorder.porderno =  txtPonumber.value;
+            txtPonumber.disabled=true;
+
+            txtGrandtotal.value = "";
+
+
+            setStyle(initial);
+
+            dteDOCreated.style.background=valid;
+            cmbPostatus.style.background=valid;
+            cmbEmployeeCreated.style.background=valid;
+            txtPonumber.style.background=valid;
+
+
+            disableButtons(false, true, true);
+
+
+        }
+
+
+        function refreshInnerForm() {
+
+
+            txtQuantity.value="";
+            txtPurchasprice.value="";
+           // alert(purchasorder.porderstatusId.id);
+            if(cmbSupplier.value != "Select Supplier"){
+                alert(cmbSupplier.value);
+                itemsbysupplier = httpRequest("../items/listbysupplier?supplierid=" +JSON.parse(cmbSupplier.value).id , "GET")
+                fillCombo(cmbItem, "Select Items", itemsbysupplier, "name", "");
+            }
+            fillCombo(cmbItem, "Select Items", '', "name", "");
+
+          fillInnerTable("tblPurchasitem",purchasorder.porderitemList ,removeItem);
+
+          var total = 0;
+
+            for (index in purchasorder.porderitemList ) {
+               total = total +  purchasorder.porderitemList[index].linetotal;
+            }
+
+
+            txtGrandtotal.value=total+".00";
+            purchasorder.grandtotal = txtGrandtotal.value.trim();
+
+        }
+
+
+        function removeItem(porderitemList,index) {
+            purchasorder.porderitemList.splice(index-1, 1);
+            refreshInnerForm();
+        }
+
+
+        function setStyle(style) {
+
+            txtPonumber.style.background = style;
+            txtGrandtotal.style.background = style;
+
+            dteDOCreated.style.background=style;
+            cmbPostatus.style.background=style;
+            cmbEmployeeCreated.style.background=style;
+            cmbSupplier.style.background=style;
+
+        }
+
+        function disableButtons(add, upd, del) {
+
+            if (add || !privilages.add) btnAdd.setAttribute("disabled", "disabled");
+            else btnAdd.removeAttribute("disabled");
+
+            if (upd || !privilages.update) btnUpdate.setAttribute("disabled", "disabled");
+            else btnUpdate.removeAttribute("disabled");
+
+            if (del || !privilages.delete) btnDelete.setAttribute("disabled", "disabled");
+            else btnDelete.removeAttribute("disabled");
+
+
+        }
+
+
+        // Binding and Validation Functions for Non-Regex-Based
+        // When Regex-Based default validation is used, programmers do not need to define these functions
+        // Default Validation and Binding is coded in "ui.bitproject.earth.lk.js"
+
+
+
+
+        function cmbSupplierMC() {
+
+
+                itemsbysupplier = httpRequest("../items/listbysupplier?supplierid=" + JSON.parse(cmbSupplier.value).id, "GET")
+                fillCombo(cmbItem, "Select Items", itemsbysupplier, "name", "");
+
+          if (oldpurchasorder !=null && oldpurchasorder.supplierId.id != JSON.parse(cmbSupplier.value).id)
+              cmbSupplier.style.background = updated;
+            else
+              cmbSupplier.style.background = valid;
+
+        }
+
+        function cmbItmMC() {
+
+           /*  meterialslist = httpRequest("../meterials/list/bymname?meterialid="+JSON.parse(cmbMeterial.value).id),"GET";
+
+             if(meterialslist != null){
+
+                 txtprice.value = meterialslist;
+
+             }*/
+
+           for(x in itemsbysupplier){
+               if(JSON.parse(cmbItem.value).id == itemsbysupplier[x].id){
+                   txtPurchasprice.value = itemsbysupplier[x].purchaseprice+".00";
+               }
+           }
+
+        }
+
+
+
+        function btnAddPorderMC() {
+
+            purchasorderitem = new Object();
+            purchasorderitem.itemId = JSON.parse(cmbItem.value);
+
+            purchasorderitem.qty = txtQuantity.value.trim();
+
+            purchasorderitem.linetotal = parseInt(txtPurchasprice.value) * purchasorderitem.qty;
+
+
+            purchasorder.porderitemList.push(purchasorderitem);
+            //console.log(purchasorder.porderitemList);
+            refreshInnerForm();
+
+        }
+
+
+
+
+
+        //Form Operation Functions
+
+        function getErrors(){
+
+            var errors = "";
+
+            if (purchasorder.porderitemList.length == 0)
+                errors = errors + "\n" + "Items Not Selected";
+
+            if (purchasorder.grandtotal == null)
+                errors = errors + "\n" + "Items Not Selected";
+
+            if (purchasorder.supplierId == null)
+                errors = errors + "\n" + "Supplier Not Selected";
+
+            if (purchasorder.employeeId == null)
+                errors = errors + "\n" + "Employee Not Selected";
+
+            if (purchasorder.porderno == null)
+                errors = errors + "\n" + "Purchase Order Number not added";
+
+            if (purchasorder.porderstatusId == null)
+                errors = errors + "\n" + "Status Not Selected";
+
+            if (purchasorder.date == null)
+                errors = errors + "\n" + "Date Not Selected";
+
+            return errors;
+
+        }
+
+        function btnAddMC() {
+
+
+            var errors = getErrors();
+
+            if(errors==""){
+
+                var itemlist="";
+                for(x in purchasorder.porderitemList)
+                    itemlist = itemlist + (itemlist==""?"":", ") +purchasorder.porderitemList[x].itemId.name
+
+                var option = window.confirm("Are you sure to add following Purchase Order ?\n" +
+                    "\nSupplier : " + purchasorder.supplierId.name +
+                    "\nPo Number : " + purchasorder.porderno +
+                    "\nItems : " + itemlist +
+                    "\nStatus : " + purchasorder.porderstatusId.name +
+                    "\nCreated By : " + purchasorder.employeeId.callingname);
+                if(option==true) {
+                    var response = httpRequest("/purchaseorders","POST",purchasorder);
+                    if(response=="0"){
+                        toast("<strong>Saved Successfully..!</strong>","success");
+
+                        loadForm();
+                        activerowno = 1;
+
+                     loadView();//loadSearchedTable();
+                    }
+                    else window.alert("Failed to Add as \n\n"+response);
+                }
+
+            }
+            else
+            { window.alert("You have following Errors\n"+errors); }
+
+
+        }
+
+        function btnClearMC() {
+            //Get Cofirmation from the User window.confirm();
+
+           var clear;
+            if(oldperchasorder==null){
+                clear=true;
+            }else{
+                if(getErrors()=='' && getUpdates()==''){
+                    clear=true;
+                }else{
+                    clear = window.confirm("Form has Some Errors or Update Values. " +
+                        "Are you sure to discard that changes ?");
+                }
+            }
+            if(clear) {
+                loadForm();
+                clearSelection(tblPerchasorder);
+            }
+
+        }
+
+        function fillForm(pur,rowno){
+
+            var filling;
+            if(oldpurchasorder == null){
+                filling=true;
+            }else{
+                if(getErrors()=='' && getUpdates()==''){
+                    filling=true;
+                }else{
+                    filling = window.confirm("Form has Some Errors or Update Values. " +
+                        "Are you sure to discard that changes ?");
+                }
+            }
+
+            if(filling) {
+                activerowno = rowno;
+
+                clearSelection(tblPurchasmeterial);
+
+                selectRow(tblPurchasmeterial,activerowno,active);
+
+                purchasorder = JSON.parse(JSON.stringify(pur));
+                oldpurchasorder = JSON.parse(JSON.stringify(pur));
+
+
+                fillCombo(cmbSupplier, "", suppliers, "name", purchasorder.supplierId.name);
+                cmbSupplier.disabled = "disable";
+                txtPonumber.value = purchasorder.ponumber;
+                txtPonumber.disabled = "disable";
+
+                txtTotalprice.value = purchasorder.totalprice;
+                fillCombo(cmbPostatus, "", postatuses, "name", purchasorder.postatusId.name);
+
+                meterialsbysupplier = httpRequest("../meterials/list/bysupplier?supplierid="+JSON.parse(cmbSupplier.value).id, "GET" )
+                fillCombo(cmbMeterial, "Select meterial", meterialsbysupplier, "name","");
+
+                fillCombo(cmbEmployeeCreated, "", employees, "callingname", purchasorder.employeeId.callingname);
+
+                refreshInnerForm();
+
+                disableButtons(true, false, false);
+                setStyle(valid);
+            }
+
+        }
+
+        function getUpdates() {
+
+            var updates = "";
+
+            if(purchasorder!=null && oldpurchasorder!=null) {
+
+                if (isEqual(purchasorder.meterialpurchasorderList,oldpurchasorder.meterialpurchasorderList,"meterialId"))
+                    updates = updates + "\nMeterials are Changed";
+
+                if (purchasorder.supplierId.name != oldpurchasorder.supplierId.name)
+                    updates = updates + "\nSupplier is Changed";
+
+                if (purchasorder.totalprice != oldpurchasorder.totalprice)
+                    updates = updates + "\nMeterial and Quentities are Changed";
+
+                if (purchasorder.employeeId.name != oldpurchasorder.employeeId.name)
+                    updates = updates + "\nPurchasorder status is Changed";
+
+                if (purchasorder.postatusId.name != oldpurchasorder.postatusId.name)
+                    updates = updates + "\nPurchasorder status is Changed";
+            }
+
+            return updates;
+        }
+
+        function btnUpdateMC() {
+
+            var errors = getErrors();
+            if (errors == "") {
+                var updates = getUpdates();
+                if (updates == "") window.alert("Nothing Updated!");
+                else {
+                    var option = window.confirm("\n\nAre your sure to update followings ! \n\n" + updates);
+                    if(option==true) {
+                        var response = httpRequest("/purchasorders","PUT",purchasorder);
+                        if(response=="0"){
+                            toast("<strong>Updated Successfully.....!</strong>","success");
+                            loadForm();
+                            loadSearchedTable();
+
+                        }
+                        else window.alert("Failed to Update as \n\n"+response);
+                    }                }
+            }
+            else
+                window.alert("You have following errors in your form\n\n"+getErrors());
+
+        }
+
+        function btnDeleteMC() {
+
+
+            var option = window.confirm("\n\nAre your sure to delete following ! \n\n" +
+                "Purchas Number : " +purchasorder.ponumber);
+
+            if(option==true) {
+                var response = httpRequest("/purchasorders","DELETE",purchasorder);
+                if(response=="0"){
+                    toast("<strong>Success !</strong> Deleted Successfully","success");
+                       loadForm();
+                   loadSearchedTable();
+
+
+                }
+                else window.alert("Failed to Delete as \n\n"+response);
+            }
+
+        }
+
+
+        //Search Functions
+
+        function loadSearchedTable(){
+
+            var ponumber = txtSearchPonumber.value.trim();
+            var postatus = cmbSearchPostatus.value;
+            var supplier = cmbSearchSupplier.value;
+
+            var supplierid="";
+            if(supplier!="Supplier")
+            { supplierid = JSON.parse(supplier).id;
+                cmbSearchSupplier.style.background = active;}
+
+            var postatusid="";
+            if(postatus!="Status")
+            {  postatusid = JSON.parse(postatus).id;
+                cmbSearchPostatus.style.background = active; }
+
+            if(ponumber!=""){  txtSearchPonumber.style.background = active; }
+
+            var query ="&ponumber=&supplierid=&postatusid=";
+
+            if(ponumber!="" || supplierid!="" || postatusid!="" )
+                query = "&ponumber=" + ponumber + "&supplierid=" + supplierid + "&postatusid=" + postatusid;
+
+            window.alert(query);
+           loadTable(activepage, cmbPageSize.value, query);
+
+        }
+
+        function btnSearchMC(){
+            activepage=1;
+            loadSearchedTable();
+        }
+
+        function btnSearchClearMC(){
+         loadView();
+        }
+
+
+    </script>
+
+
+
+
+</head>
+<body>
+<div class="container-fluid">
+    <div class="row" id="ui">
+        <div class="col-md-12">
+            <div class="panel panel-primary" style="margin-top: 10px;">
+                <div class="panel-heading">
+            <h3>Purchasorder Management</h3>
+        </div>
+        <div class="panel-body">
+            <div class="row">
+
+                <div class="col-md-5" id="form">
+                    <form class="form-horizontal" onsubmit="return false" id="purchasorderform" >
+
+                        <script>
+                            // Defining UI-Componnets and Layouts
+                            // Default UI-Componnets and Layouts is coded in "ui.bitproject.earth.lk.js"
+
+                            comboBox('purchasorderform','cmbSupplier','Supplier',4,'purchasorder','supplierId','oldpurchasorder');
+                            textField('purchasorderform','txtPonumber','ponumber','Porder number','',4,"",'purchasorder','porderno','oldpurchasorder');
+                        </script>
+
+                        <div id="innerform" style="background-color: rgba(0,0,255,0.1); padding:20px 10px;margin-bottom: 15px">
+
+                        <script>
+                            comboBox('innerform','cmbItem','Item',4,'','','');
+                            textField('innerform','txtPurchasprice','Purchas price','Purchas price','',4,"",'','','');
+                            textField('innerform','txtQuantity','Quantity','Quantity','',4,"",'','','');
+                        </script>
+                        <div class="text-right" style="margin-bottom: 10px">
+                            <input class="btn btn-primary btn-sm" type="button" id="btnAddPorder" value="Add" style=""/>
+                        </div>
+                            <div class="row">
+                                <div class="table-responsive col-md-8 col-md-offset-4" id="tableInnerParent">
+                                    <script>
+                                        var metadatainnertable = [
+                                            {name:'Item',search:false,datatype:'text',property:'itemId.name'},
+                                            {name:'Purchas Price',search:false,datatype:'text',property:'itemId.purchaseprice'},
+                                            {name:'Quantity',search:false,datatype:'text',property:'qty'},
+                                            {name:'Line Total',search:false,datatype:'text',property:'linetotal'}
+                                        ];
+                                        tableForInnerForm("tableInnerParent","tblPurchasitem",metadatainnertable,true);
+                                    </script>
+                                </div>
+                            </div>
+                        </div>
+
+
+
+                            <script>
+
+
+                            textField('purchasorderform','txtGrandtotal','Grand Total','Grand Total','',4,"",'purchasorder','grandtotal','oldpurchasorder');
+
+                            comboBox('purchasorderform','cmbPostatus','Purchasorder Status',4,'purchasorder','porderstatusId','oldpurchasorder');
+
+                            comboBox('purchasorderform','cmbEmployeeCreated','Created Employee',4,'purchasorder','employeeId','oldpurchasorder');
+
+                            dateField('purchasorderform','dteDOCreated','Created Date','Select Created Date',4,"",'purchasorder','date','oldpurchasorder');
+
+                            // Custom UI-Componnets and Layouting
+
+                           // invoiceitemList
+
+                        </script>
+
+                        <div class="text-right">
+                            <input class="btn btn-danger btn-sm" type="button" id="btnDelete" value="Delete" style="width: 12%"/>
+                            <input class="btn btn-warning btn-sm" type="button" id="btnUpdate" value="Update" style="width: 12%"/>
+                            <input class="btn btn-success btn-sm" type="button" id="btnAdd" value="Add" style="width: 14%"/>
+                            <input class="btn btn-warning btn-sm" type="button" id="btnClear" value="Clear" style="width: 12%"/>
+                            <input class="btn btn-default btn-sm" type="button" id="btnFormPrint" value="Print" style="width: 12%"/>
+                        </div>
+
+
+
+                    </form>
+                </div>
+
+
+                <div class="col-md-1"></div>
+                <div class="col-md-6" id="employeeview">
+
+                    <form class="form-inline" onsubmit="return false">
+                        <div class="form-group form-group-sm">
+                            <input placeholder="Search By Name" class="form-control" type="text" id="txtSearchPonumber"/>
+                        </div>
+
+                        <div class="form-group form-group-sm">
+                            <select class="form-control" id="cmbSearchSupplier"></select>
+                        </div>
+                        <div class="form-group form-group-sm">
+                            <select class="form-control" id="cmbSearchPostatus"></select>
+                        </div>
+                        <input type="button" class="btn btn-warning btn-sm" value="Clear Search" id="btnSearchClear"/>
+                        <input type="button" class="btn btn-success btn-sm" value="Search" id="btnSearch"/>
+                        <button class="btn btn-default btn-sm pull-right" type="button" id="btnPrintTable">Print</button>
+                    </form>
+                    <hr/>
+
+
+                    <div class="table-responsive" id="tableParent">
+
+                        <script>
+
+                            function getItemColumn(ob) {
+                                var meterialList="";
+                                for(x in ob.porderitemList)
+                                    meterialList = meterialList + (meterialList==""?"":", ") +ob.porderitemList[x].itemId.name;
+                                return meterialList;
+                            }
+
+                            var metadata = [
+                                {name:'Supplier',search:true,datatype:'text',property:'supplierId.name'},
+                                {name:'Ponumber',search:true,datatype:'text',property:'porderno'},
+                                {name:'Items',search:true,datatype:'text',property:getItemColumn},
+                                {name:'Total',search:true,datatype:'text',property:'grandtotal'},
+                                {name:'Status',search:true,datatype:'text',property:'porderstatusId.name'}
+                            ];
+
+                            table("tableParent","tblPurchasorder",metadata,[3,10,15,30,500,1000],btnSearchMC,true);
+
+                        </script>
+
+
+                    </div>
+                    <ul id="pagination" class="pagination"></ul>
+
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-footer"><div id="err"><h3>Error Log</h3></div></div>
+    </div>
+</div>
+    </div>
+</div>
+
+</body>
+</html>

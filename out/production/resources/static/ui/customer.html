@@ -1,0 +1,645 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Two Elephants Fireworks : BIT Final Project</title>
+    <link rel="stylesheet" href="../plugin/bootstrap/css/bootstrap.min.css"/>
+    <script src="../plugin/jquery/jquery.min.js"></script>
+    <script src="../plugin/bootstrap/js/bootstrap.min.js"></script>
+
+    <link rel="stylesheet" href="../style/common.css"/>
+    <script src="../script/common.bitproject.earth.lk.v1.js"></script>
+    <script src="../script/ui.bitproject.earth.lk.v1.js"></script>
+
+    <script>
+
+        window.addEventListener("load", initialize);
+
+        //Initializing Functions
+
+        function initialize() {
+
+            btnFormPrint.onclick=function(){
+                printForm("customerform");
+
+            }
+
+            btnPrintTable.onclick=function(){
+                printTable("tblCustomer");
+            }
+
+            btnAdd.addEventListener("click",btnAddMC);
+            btnClear.addEventListener("click",btnClearMC);
+            btnUpdate.addEventListener("click",btnUpdateMC);
+            btnDelete.addEventListener("click",btnDeleteMC);
+
+          btnSearch.addEventListener("click",btnSearchMC);
+          btnSearchClear.addEventListener("click",btnSearchClearMC);
+
+            privilages = httpRequest("../privilages?module=CUSTOMER","GET");
+
+            regexes = httpRequest("../regexes/customer","GET");
+
+
+            txtFname.setAttribute("data-pattern",regexes.fname.regex);
+            txtLname.setAttribute("data-pattern",regexes.lname.regex);
+            txtNIC.setAttribute("data-pattern",regexes.nic.regex);
+            txtAddress.setAttribute("data-pattern",regexes.address.regex);
+            txtMobile.setAttribute("data-pattern",regexes.mobile.regex);
+            txtLand.setAttribute("data-pattern",regexes.land.regex);
+            txtEmail.setAttribute("data-pattern",regexes.email.regex);
+            txtCreditlimit.setAttribute("data-pattern",regexes.creditlimit.regex);
+            txtArreas.setAttribute("data-pattern",regexes.arreas.regex);
+            txtDescription.setAttribute("data-pattern",regexes.description.regex);
+
+            genders = httpRequest("../genders/list","GET");
+            employees = httpRequest("../employees/list","GET");
+            customerstatuses = httpRequest("../customerstatuses/list","GET");
+
+
+            valid = "lightgreen";
+            invalid = "pink";
+            initial = "white";
+            updated = "khaki";
+            active = "khaki";
+
+            loadView();
+            loadForm();
+
+
+
+        }
+
+        function loadView() {
+
+            //Search Area
+            txtSearchName.value="";
+            txtSearchNIC.value="";
+            txtSearchArreas.value="";
+            fillCombo(cmbSearchCustomerstatus,"Status",customerstatuses,"name","");
+            cmbSearchCustomerstatus.style.background = "";
+
+            txtSearchName.style.background = "";
+            txtSearchNIC.style.background = "";
+            txtSearchArreas.style.background = "";
+
+
+            //Table Area
+            activerowno = "";
+            activepage = 1;
+            var query ="&name=&nic=&arreas=&customerstatusid=";
+            loadTable(1,cmbPageSize.value,query);
+
+
+        }
+
+        function loadTable(page,size,query) {
+
+            page = page - 1;
+            customers = new Array();
+            var data = httpRequest("/customers?page="+page+"&size="+size+query,"GET");
+            if(data.content!= undefined) customers = data.content;
+            createPagination('pagination',data.totalPages, data.number+1,paginate);
+            fillTable('tblCustomer',customers,fillForm);
+            clearSelection(tblCustomer);
+            if(activerowno!="")selectRow(tblCustomer,activerowno,active);
+            window.location.href="#ui";
+
+        }
+
+        function paginate(page) {
+
+            var paginate;
+            if(oldcustomer==null){
+                paginate=true;
+            }else{
+                if(getErrors()==''&&getUpdates()==''){
+                    paginate=true;
+                }else{
+                    paginate = window.confirm("Form has Some Errors or Update Values. " +
+                        "Are you sure to discard that changes ?");
+                }
+            }
+            if(paginate) {
+                activepage=page;
+                activerowno=""
+                loadSearchedTable();
+                loadForm();
+            }
+
+        }
+
+        function loadForm() {
+
+            customer = new Object();
+            oldcustomer = null;
+
+            fillCombo(cmbGender,"Select Gender",genders,"name","");
+
+            fillCombo(cmbAssignemployee,"",employees,"callingname",session.getObject("user").employeeId.callingname);
+            customer.employeeId=JSON.parse(cmbAssignemployee.value);
+            cmbAssignemployee.disabled = "disable";
+
+            fillCombo(cmbCustomerstatus,"Select Status",customerstatuses,"name","");
+
+
+
+            var today = new Date();
+            var month = today.getMonth()+1;
+            if(month<10) month = "0"+month;
+            var date = today.getDate()+1;
+            if(date<10) date = "0"+date;
+
+            dteDOAssign.value=today.getFullYear()+"-"+month+"-"+date;
+            customer.regdate=dteDOAssign.value;
+            dteDOAssign.disabled = "disable";
+
+            txtFname.value = "";
+            txtLname.value = "";
+
+            txtNIC.value = "";
+            txtAddress.value = "";
+            txtMobile.value = "";
+            txtLand.value = "";
+            txtEmail.value = "";
+            txtCreditlimit.value = "";
+            txtArreas.value = "";
+
+            txtDescription.value = "";
+
+
+            setStyle(initial);
+
+            cmbAssignemployee.style.background=valid;
+            dteDOAssign.style.background=valid;
+
+            disableButtons(false, true, true);
+
+        }
+
+        function setStyle(style) {
+
+
+            txtFname.style.background = style;
+            txtLname.style.background = style;
+            cmbGender.style.background = style;
+
+            txtNIC.style.background = style;
+
+            txtAddress.style.background = style;
+            txtMobile.style.background = style;
+            txtLand.style.background = style;
+            txtEmail.style.background = style;
+            txtCreditlimit.style.background = style;
+            txtArreas.style.background = style;
+
+            cmbAssignemployee.style.background = style;
+            dteDOAssign.style.background = style;
+            txtDescription.style.background = style;
+            cmbCustomerstatus.style.background = style;
+
+        }
+
+        function disableButtons(add, upd, del) {
+
+            if (add || !privilages.add) btnAdd.setAttribute("disabled", "disabled");
+            else btnAdd.removeAttribute("disabled");
+
+            if (upd || !privilages.update) btnUpdate.setAttribute("disabled", "disabled");
+            else btnUpdate.removeAttribute("disabled");
+
+            if (del || !privilages.delete) btnDelete.setAttribute("disabled", "disabled");
+            else btnDelete.removeAttribute("disabled");
+
+        }
+
+
+        // Binding and Validation Functions for Non-Regex-Based
+        // When Regex-Based default validation is used, programmers do not need to define these functions
+        // Default Validation and Binding is coded in "ui.bitproject.earth.lk.js"
+
+
+        //Form Operation Functions
+        
+        function getErrors() {
+
+            var errors = "";
+
+            if (customer.fname == null)
+                errors = errors + "\n" + regexes.fname.message;
+
+            if (customer.nic == null)
+                errors = errors + "\n" + regexes.nic.message;
+
+            if (customer.lname == null)
+                errors = errors + "\n" + regexes.lname.message;
+
+            if (customer.genderId == null)
+                errors = errors + "\n" + "Gender Not Selected";
+
+            if (customer.address == null)
+                errors = errors + "\n" + regexes.address.message;
+
+            if (customer.mobile == null)
+                errors = errors + "\n" + regexes.mobile.message;
+
+            if (customer.land== null && txtLand.value!="")
+                errors = errors + "\n" + regexes.land.message;
+
+            if (customer.email== null && txtEmail.value!="")
+                errors = errors + "\n" + regexes.email.message;
+
+            if (customer.creditlimit== null && txtCreditlimit.value!="")
+                errors = errors + "\n" + regexes.creditlimit.message;
+
+            if (customer.arreas== null && txtArreas.value!="")
+                errors = errors + "\n" + regexes.arreas.message;
+
+            if (customer.employeeId == null)
+                errors = errors + "\n" + "Assign Employee Not Selected";
+
+            if (customer.regdate == null)
+                errors = errors + "\n" + "Registor Date Invalid";
+
+            if (customer.description == null && txtDescription.value!="")
+                errors = errors + "\n" + regexes.description.message;
+
+            if (customer.customerstatusId == null)
+                errors = errors + "\n" + "Customerstatus Not Selected";
+
+
+            return errors;
+
+
+        }
+        
+        function btnAddMC() {
+
+            var errors = getErrors();
+
+           if(errors=="") {
+             var option = window.confirm("Are you sure to add following Customer ?\n" +
+                    "\nFirst Name : " + customer.fname +
+                    "\nLast Name : " + customer.lname +
+                    "\nGender : " + customer.genderId.name +
+                    "\nNIC : " + customer.nic +
+                    "\nAddress : " + customer.address +
+                    "\nMobile Number : " + customer.mobile +
+                    "\nLand Number: " + customer.land +
+                    "\nEmail : " + customer.email +
+                    "\nCredit Limit : " + customer.creditlimit +
+                    "\nArreas : " + customer.arreas +
+                    "\nAssign Employee : " + customer.employeeId.name +
+                    "\nAssign Date : " + customer.regdate +
+                    "\nDescription : " + customer.description +
+                    "\nCustomer Status : " + customer.customerstatusId.name);
+                if(option==true) {
+                  var response = httpRequest("/customers","POST",customer);
+                    if(response=="0"){
+                    toast("<strong>Saved Successfully.........!!</strong> ","success");
+                    loadForm();
+                    activerowno = 1;
+                    //loadSearchedTable();
+                    loadView();
+                    }
+                    else window.alert("Failed to Add as \n\n"+response);
+                }
+
+          }
+          else
+           { window.alert("You have following Errors\n"+errors); }
+
+        }
+
+        function btnClearMC() {
+            //Get Cofirmation from the User window.confirm();
+
+            var clear;
+            if(oldcustomer==null){
+                clear=true;
+            }else{
+                if(getErrors()==''&&getUpdates()==''){
+                    clear=true;
+                }else{
+                    clear = window.confirm("Form has Some Errors or Update Values. " +
+                        "Are you sure to discard that changes ?");
+                }
+            }
+            if(clear) {
+                loadForm();
+                clearSelection(tblCustomer);
+            }
+
+
+       }
+
+        function fillForm(cus,rowno){
+
+
+            var filling;
+            if(oldcustomer==null){
+                filling=true;
+            }else{
+
+                if(getErrors()=='' && getUpdates()==''){
+                    filling=true;
+                }else{
+                    filling = window.confirm("Form has Some Errors or Update Values. " +
+                        "Are you sure to discard that changes ?");
+                }
+            }
+
+            if(filling) {
+                activerowno = rowno;
+                alert(activerowno)
+               clearSelection(tblCustomer);
+               selectRow(tblCustomer,activerowno,active);
+
+                customer = JSON.parse(JSON.stringify(cus));
+                oldcustomer = JSON.parse(JSON.stringify(cus));
+
+
+                txtFname.value = customer.fname;
+                txtLname.value = customer.lname;
+                txtNIC.value = customer.nic;
+                txtAddress.value = customer.address;
+                txtMobile.value = customer.mobile;
+                txtLand.value = customer.land;
+                txtEmail.value = customer.email;
+                txtCreditlimit.value = customer.creditlimit;
+                txtArreas.value = customer.arreas;
+                dteDOAssign.value = customer.regdate;
+                txtDescription.value = customer.description;
+
+                fillCombo(cmbGender, "Select Gender", genders, "name", customer.genderId.name);
+                fillCombo(cmbAssignemployee, "Select Assign Employee", employees, "callingname", customer.employeeId.callingname);
+                fillCombo(cmbCustomerstatus, "", customerstatuses, "name", customer.customerstatusId.name);
+
+
+
+                disableButtons(true, false, false);
+                setStyle(valid);
+            }
+
+        }
+
+        function getUpdates() {
+
+            var updates = "";
+
+            if(customer!=null && oldcustomer!=null) {
+
+                if (customer.fname != oldcustomer.fname)
+                    updates = updates + "\nFirst name is Changed";
+
+                if (customer.nic != oldcustomer.nic)
+                    updates = updates + "\nNIC is Changed";
+
+                if (customer.lname != oldcustomer.lname)
+                    updates = updates + "\nLast name is Changed";
+
+                if (customer.genderId.name != oldcustomer.genderId.name)
+                    updates = updates + "\nGender is Changed";
+
+                if (customer.address != oldcustomer.address)
+                    updates = updates + "\nAddress is Changed";
+
+                if (customer.mobile != oldcustomer.mobile)
+                    updates = updates + "\nMobile Number is Changed";
+
+                if (customer.land != oldcustomer.land)
+                    updates = updates + "\nLand Number is Changed";
+
+                if (customer.arreas != oldcustomer.arreas)
+                    updates = updates + "\nArreas Amount is Changed";
+
+                if (customer.creditlimit != oldcustomer.creditlimit)
+                    updates = updates + "\nCredit Amount is Changed";
+
+                if (customer.employeeId.name != oldcustomer.employeeId.name)
+                    updates = updates + "\nAssigned Employee is Changed";
+
+                if (customer.doassignment != oldcustomer.doassignment)
+                    updates = updates + "\nDate of Assignment is Changed";
+
+
+                if (customer.description != oldcustomer.description)
+                    updates = updates + "\nDescription is Changed";
+
+                if (customer.customerstatusId.name != oldcustomer.customerstatusId.name)
+                    updates = updates + "\nCustomerstatus is Changed";
+            }
+
+            return updates;
+
+        }
+
+        function btnUpdateMC() {
+
+            var errors = getErrors();
+            if (errors == "") {
+                var updates = getUpdates();
+                if (updates == "") window.alert("Nothing Updated!");
+                else {
+
+                    var option = window.confirm("\n\nAre your sure to update followings ! \n\n" + updates);
+                    if(option==true) {
+                        var response = httpRequest("/customers","PUT",customer);
+                        if(response=="0"){
+                            toast("<strong>Updated Successfully.........!</strong>","success");
+                            loadForm();
+                         loadSearchedTable();
+
+
+                        }
+                        else window.alert("Failed to Update as \n\n"+response);
+                    }
+
+
+                }
+            }
+            else
+                window.alert("You have following errors in your form\n\n"+getErrors());
+
+        }
+
+        function btnDeleteMC() {
+
+
+            var option = window.confirm("\n\nAre your sure to delete following ! \n\n" +
+                "Name : " +customer.name+ "\nNic : " +customer.nic);
+
+            if(option==true) {
+                var response = httpRequest("/customers","DELETE",customer);
+                if(response=="0"){
+                    toast("<strong>Success !</strong> Deleted Successfully","success");
+                    loadForm();
+                    loadSearchedTable();
+
+
+                }
+                else window.alert("Failed to Delete as \n\n"+response);
+            }
+
+       }
+
+
+        //Search Functions
+
+        function loadSearchedTable() {
+
+            var name = txtSearchName.value;
+            var nic = txtSearchNIC.value;
+            var arreas = txtSearchArreas.value;
+
+            var customerstatus = cmbSearchCustomerstatus.value;
+
+
+
+            var customerstatusid="";
+            if(customerstatus!="Status")
+            {  customerstatusid = JSON.parse(customerstatus).id;
+                cmbSearchCustomerstatus.style.background = active; }
+
+            if(name!=""){  txtSearchName.style.background = active; }
+            if(nic!=""){  txtSearchNIC.style.background = active; }
+            if(arreas!=""){  txtSearchNIC.style.background = active; }
+
+            var query ="&name=&nic=&arreas=&customerstatusid=";
+
+            if(name!="" || nic!="" || arreas!="" || customerstatusid!="" )
+                query = "&name=" + name + "&nic=" + nic + "&arreas=" + arreas + "&customerstatusid=" + customerstatusid;
+
+            window.alert(query);
+            loadTable(activepage, cmbPageSize.value, query);
+
+        }
+
+        function btnSearchMC(){
+          activepage=1;
+         loadSearchedTable();
+        }
+
+        function btnSearchClearMC(){
+              loadView();
+        }
+
+    </script>
+
+
+
+</head>
+
+<body>
+<div class="container-fluid">
+    <div class="row" id="ui">
+        <div class="col-md-12">
+            <div class="panel panel-primary" style="margin-top: 10px;">
+
+                <div class="panel-heading">
+                    <h3>Customer Management</h3>
+                </div>
+
+                <div class="panel-body">
+                    <div  class="row">
+
+                        <div class="col-md-4" id="form">
+                            <form class="form-horizontal" onsubmit="return false" id="customerform" >
+
+                                <script>
+
+                                 // Defining UI-Componnets and Layouts
+                                 // Default UI-Componnets and Layouts is coded in "ui.bitproject.earth.lk.js"
+
+                                  textField('customerform','txtFname','First Name','Enter First-Name Here','',4,"",'customer','fname','oldcustomer');
+                                 textField('customerform','txtLname','Last Name','Enter Last-Name Here','',4,"",'customer','lname','oldcustomer');
+                                 comboBox('customerform','cmbGender','Gender',4,'customer','genderId','oldcustomer');
+                                 textField('customerform','txtNIC','NIC','Enter NIC Here','',4,"",'customer','nic','oldcustomer');
+                                 textArea('customerform','txtAddress','Address','Enter Address Here','',4,"",'customer','address','oldcustomer');
+                                 textField('customerform','txtMobile','Mobile Number','Enter Mobile-Number Here','',4,"",'customer','mobile','oldcustomer');
+                                 textField('customerform','txtLand','Land Number','Enter Land-Number Here','',4,"",'customer','land','oldcustomer');
+                                 textField('customerform','txtEmail','Email','Enter E-mail Here','',4,"",'customer','email','oldcustomer');
+                                 textField('customerform','txtCreditlimit','Credit Limit','Enter Credit limite Here','',4,"",'customer','creditlimit','oldcustomer');
+                                 textField('customerform','txtArreas','Arreas','Enter Arreas Here','',4,"",'customer','arreas','oldcustomer');
+                                 comboBox('customerform','cmbAssignemployee','Assign Employee',4,'customer','employeeId','oldcustomer');
+                                 dateField('customerform','dteDOAssign','Registor Date','Select Registor Date',4,"",'customer','regdate','oldcustomer')
+                                 textArea('customerform','txtDescription','Description','Enter Description Here','',4,"",'customer','description','oldcustomer');
+                                 comboBox('customerform','cmbCustomerstatus','Customerstatus',4,'customer','customerstatusId','oldcustomer');
+
+
+                                </script>
+
+
+                                    <div class="text-right">
+                                        <input class="btn btn-danger btn-sm" type="button" id="btnDelete" value="Delete" style="width: 12%"/>
+                                        <input class="btn btn-warning btn-sm" type="button" id="btnUpdate" value="Update" style="width: 12%"/>
+                                        <input class="btn btn-success btn-sm" type="button" id="btnAdd" value="Add" style="width: 14%"/>
+                                        <input class="btn btn-warning btn-sm" type="button" id="btnClear" value="Clear" style="width: 12%"/>
+                                        <input class="btn btn-default btn-sm" type="button" id="btnFormPrint" value="Print" style="width: 12%"/>
+                                    </div>
+
+
+                            </form>
+                        </div>
+
+                        <div class="col-md-1"></div>
+
+                        <div class="col-md-7" id="customerview">
+                            <form class="form-inline" onsubmit="return false">
+                                <div class="form-group form-group-sm">
+                                    <input placeholder="Search By Name" class="form-control" type="text" id="txtSearchName"/>
+                                </div>
+                                <div class="form-group form-group-sm">
+                                    <input placeholder="Search By NIC" class="form-control" type="text" id="txtSearchNIC"/>
+                                </div>
+                                <div class="form-group form-group-sm">
+                                    <input placeholder="Search By Arreas" class="form-control" type="text" id="txtSearchArreas"/>
+                                </div>
+                                <div class="form-group form-group-sm">
+                                    <select class="form-control" id="cmbSearchCustomerstatus"></select>
+                                </div>
+
+                                <input type="button" class="btn btn-warning btn-sm" value="Clear" id="btnSearchClear"/>
+                                <input type="button" class="btn btn-success btn-sm" value="Search" id="btnSearch"/>
+                                <button class="btn btn-default btn-sm pull-right" type="button" id="btnPrintTable">Print</button>
+                            </form>
+                            <hr/>
+                            <div class="table-responsive" id="tableParent">
+
+                                <script>
+
+
+
+                                    var metadata = [
+                                        {name:'Name',search:true,datatype:'text',property:'fname'},
+                                        {name:'NIC',search:true,datatype:'text',property:'nic'},
+                                        {name:'Mobile',search:true,datatype:'text',property:'mobile'},
+                                        {name:'Mobile',search:true,datatype:'text',property:'mobile'},
+                                        {name:'Arreas Amount',search:true,datatype:'text',property:'arreas'},
+                                        {name:'Customer Status',search:true,datatype:'text',property:'customerstatusId.name'},
+                                        {name:'Description',search:true,datatype:'text',property:'description'}
+                                    ];
+                                    table("tableParent","tblCustomer",metadata,[3,10,15,30,500,1000],btnSearchMC,true);
+
+                                </script>
+
+
+                            </div>
+                            <ul id="pagination" class="pagination"></ul>
+                        </div>
+                    </div>
+
+                </div>
+
+                            <div class="panel-footer">
+                                <div id="err">
+                                    <h3>Error Log</h3>
+                                </div>
+                            </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
